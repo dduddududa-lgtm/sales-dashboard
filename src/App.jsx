@@ -150,6 +150,38 @@ const Dashboard = () => {
     }
   };
 
+  const saveTemplate = async () => {
+    try {
+      const template = {
+        name: `テンプレート_${new Date().toISOString()}`,
+        filters,
+        period
+      };
+      
+      await supabase.from('templates').insert([template]);
+      await loadTemplates();
+      alert('テンプレートを保存しました');
+    } catch (error) {
+      alert('保存失敗: ' + error.message);
+    }
+  };
+
+  const applyTemplate = (template) => {
+    setFilters(template.filters);
+    setPeriod(template.period);
+  };
+
+  const deleteTemplate = async (id) => {
+    if (window.confirm('このテンプレートを削除しますか？')) {
+      try {
+        await supabase.from('templates').delete().eq('id', id);
+        await loadTemplates();
+      } catch (error) {
+        alert('削除失敗: ' + error.message);
+      }
+    }
+  };
+
   const addData = async () => {
     try {
       await supabase.from('sales_data').insert([newData]);
@@ -243,8 +275,25 @@ const Dashboard = () => {
     URL.revokeObjectURL(url);
   };
 
+  const getColorCode = (color) => {
+    const colors = {
+      blue: '#3b82f6',
+      green: '#10b981',
+      orange: '#f59e0b',
+      red: '#ef4444',
+      purple: '#8b5cf6',
+      indigo: '#6366f1',
+      teal: '#14b8a6'
+    };
+    return colors[color] || '#3b82f6';
+  };
+
   const fmtN = (n) => Number.isFinite(n) ? Math.round(n).toLocaleString() : '–';
   const fmtP = (n, d = 1) => Number.isFinite(n) ? `${n.toFixed(d)}%` : 'N/A';
+  const toNum = (v, fallback) => {
+    const n = parseFloat(v);
+    return Number.isFinite(n) && n >= 0 ? n : fallback;
+  };
   const filteredData = useMemo(() => {
     const endDate = new Date();
     endDate.setHours(23, 59, 59, 999);
@@ -260,6 +309,25 @@ const Dashboard = () => {
       const matchCampaign = filters.campaign === 'all' || d.campaign === filters.campaign;
       const matchWeek = filters.week === 'all' || d.week === parseInt(filters.week);
       
+      return inPeriod && matchTheme && matchChannel && matchCampaign && matchWeek;
+    });
+  }, [rawData, period, filters]);
+
+  const previousPeriodData = useMemo(() => {
+    const endDate = new Date();
+    endDate.setDate(endDate.getDate() - period);
+    endDate.setHours(23, 59, 59, 999);
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - (period * 2) + 1);
+    startDate.setHours(0, 0, 0, 0);
+
+    return rawData.filter(d => {
+      const itemDate = new Date(d.date);
+      const inPeriod = itemDate >= startDate && itemDate <= endDate;
+      const matchTheme = filters.theme === 'all' || d.theme === filters.theme;
+      const matchChannel = filters.channel === 'all' || d.channel === filters.channel;
+      const matchCampaign = filters.campaign === 'all' || d.campaign === filters.campaign;
+      const matchWeek = filters.week === 'all' || d.week === parseInt(filters.week);
       return inPeriod && matchTheme && matchChannel && matchCampaign && matchWeek;
     });
   }, [rawData, period, filters]);
@@ -304,6 +372,10 @@ const Dashboard = () => {
       warm_reach: target > 0 ? (totals.warm_call / target) * 100 : 0,
       appt_reach: target > 0 ? (totals.appt / target) * 100 : 0,
       won_reach: target > 0 ? (totals.won / target) * 100 : 0,
+      pv_to_doc: totals.pv > 0 ? (totals.doc_req / totals.pv) * 100 : 0,
+      doc_to_warm: totals.doc_req > 0 ? (totals.warm_call / totals.doc_req) * 100 : 0,
+      warm_to_appt: totals.warm_call > 0 ? (totals.appt / totals.warm_call) * 100 : 0,
+      appt_to_won: totals.appt > 0 ? (totals.won / totals.appt) * 100 : 0,
       sample_approval: totals.sample_presented > 0 ? (totals.sample_approved / totals.sample_presented) * 100 : 0,
       sla_compliance: totals.delivery_total > 0 ? (totals.delivery_on_sla / totals.delivery_total) * 100 : 0,
       valid_rate: totals.delivery_total > 0 ? (totals.leads_valid / totals.delivery_total) * 100 : 0,
@@ -313,12 +385,57 @@ const Dashboard = () => {
   };
 
   const currentMetrics = useMemo(() => calculateMetrics(filteredData), [filteredData]);
+  const previousMetrics = useMemo(() => calculateMetrics(previousPeriodData), [previousPeriodData]);
 
-  const metricsCards = [
+  const calculateChange = (current, previous) => {
+    if (!isFinite(previous) || previous === 0) return NaN;
+    return ((current - previous) / previous) * 100;
+  };
+
+  const detectAnomalies = () => {
+    const anomalies = [];
+    const activeThresholds = thresholds.global;
+    
+    if (currentMetrics.ctr < activeThresholds.ctr_min) {
+      anomalies.push({ type: 'CTR', value: currentMetrics.ctr, threshold: activeThresholds.ctr_min, status: 'low', unit: '%' });
+    }
+    if (currentMetrics.cpl > activeThresholds.cpl_max) {
+      anomalies.push({ type: 'CPL', value: currentMetrics.cpl, threshold: activeThresholds.cpl_max, status: 'high', unit: '円' });
+    }
+    if (currentMetrics.valid_rate < activeThresholds.valid_rate_min) {
+      anomalies.push({ type: '有効率', value: currentMetrics.valid_rate, threshold: activeThresholds.valid_rate_min, status: 'low', unit: '%' });
+    }
+    if (currentMetrics.cvr < activeThresholds.cvr_min) {
+      anomalies.push({ type: 'CVR', value: currentMetrics.cvr, threshold: activeThresholds.cvr_min, status: 'low', unit: '%' });
+    }
+    if (currentMetrics.exchange_rate > activeThresholds.exch_rate_max) {
+      anomalies.push({ type: '交換率', value: currentMetrics.exchange_rate, threshold: activeThresholds.exch_rate_max, status: 'high', unit: '%' });
+    }
+    return anomalies;
+  };
+
+  const anomalies = detectAnomalies();
+
+  const findBottleneck = () => {
+    const rates = [
+      { name: 'PV→資料請求', rate: currentMetrics.pv_to_doc, hint: 'コピーの見直しまたはCTAの強化を検討' },
+      { name: '資料請求→ウォームコール', rate: currentMetrics.doc_to_warm, hint: 'リード品質の精査またはフォロースピード改善' },
+      { name: 'ウォームコール→アポ', rate: currentMetrics.warm_to_appt, hint: 'トークスクリプト改善またはセグメント縮小' },
+      { name: 'アポ→受注', rate: currentMetrics.appt_to_won, hint: '提案内容の見直しまたは価格設定の再検討' }
+    ];
+    return rates.reduce((min, r) => r.rate < min.rate ? r : min, rates[0]);
+  };
+
+  const bottleneck = findBottleneck();
+
+  const metricsCards = useMemo(() => [
     {
       id: 'sample_approval',
       label: 'サンプル承認率',
       value: currentMetrics.sample_approval.toFixed(1) + '%',
+      numerator: currentMetrics.sample_approved,
+      denominator: currentMetrics.sample_presented,
+      change: calculateChange(currentMetrics.sample_approval, previousMetrics.sample_approval),
       color: 'indigo',
       icon: CheckCircle
     },
@@ -326,6 +443,9 @@ const Dashboard = () => {
       id: 'sla_compliance',
       label: 'SLA遵守率',
       value: currentMetrics.sla_compliance.toFixed(1) + '%',
+      numerator: currentMetrics.delivery_on_sla,
+      denominator: currentMetrics.delivery_total,
+      change: calculateChange(currentMetrics.sla_compliance, previousMetrics.sla_compliance),
       color: 'teal',
       icon: Clock
     },
@@ -334,6 +454,7 @@ const Dashboard = () => {
       label: 'ターゲット数',
       value: currentMetrics.target.toLocaleString(),
       reach: 100,
+      change: calculateChange(currentMetrics.target, previousMetrics.target),
       color: 'blue',
       icon: Target
     },
@@ -342,6 +463,7 @@ const Dashboard = () => {
       label: 'PV数',
       value: currentMetrics.pv.toLocaleString(),
       reach: currentMetrics.pv_reach,
+      change: calculateChange(currentMetrics.pv, previousMetrics.pv),
       color: 'blue',
       icon: Users
     },
@@ -350,6 +472,7 @@ const Dashboard = () => {
       label: '資料請求数',
       value: currentMetrics.doc_req.toLocaleString(),
       reach: currentMetrics.doc_reach,
+      change: calculateChange(currentMetrics.doc_req, previousMetrics.doc_req),
       color: 'green',
       icon: Calendar
     },
@@ -358,6 +481,7 @@ const Dashboard = () => {
       label: 'ウォームコール数',
       value: currentMetrics.warm_call.toLocaleString(),
       reach: currentMetrics.warm_reach,
+      change: calculateChange(currentMetrics.warm_call, previousMetrics.warm_call),
       color: 'orange',
       icon: Phone
     },
@@ -366,6 +490,7 @@ const Dashboard = () => {
       label: 'アポ数',
       value: currentMetrics.appt.toLocaleString(),
       reach: currentMetrics.appt_reach,
+      change: calculateChange(currentMetrics.appt, previousMetrics.appt),
       color: 'red',
       icon: CheckCircle,
       hideInV1: true
@@ -375,11 +500,62 @@ const Dashboard = () => {
       label: '受注',
       value: currentMetrics.won.toLocaleString(),
       reach: currentMetrics.won_reach,
+      change: calculateChange(currentMetrics.won, previousMetrics.won),
       color: 'purple',
       icon: CheckCircle,
       hideInV1: true
     }
-  ];
+  ], [currentMetrics, previousMetrics]);
+
+  const conversionRates = useMemo(() => [
+    {
+      label: 'ターゲット→PV',
+      rate: currentMetrics.pv_reach.toFixed(1) + '%',
+      numerator: currentMetrics.pv,
+      denominator: currentMetrics.target,
+      change: calculateChange(currentMetrics.pv_reach, previousMetrics.pv_reach),
+      isBottleneck: false
+    },
+    {
+      label: 'PV→資料請求',
+      rate: currentMetrics.pv_to_doc.toFixed(1) + '%',
+      numerator: currentMetrics.doc_req,
+      denominator: currentMetrics.pv,
+      change: calculateChange(currentMetrics.pv_to_doc, previousMetrics.pv_to_doc),
+      isBottleneck: bottleneck.name === 'PV→資料請求'
+    },
+    {
+      label: '資料請求→ウォームコール',
+      rate: currentMetrics.doc_to_warm.toFixed(1) + '%',
+      numerator: currentMetrics.warm_call,
+      denominator: currentMetrics.doc_req,
+      change: calculateChange(currentMetrics.doc_to_warm, previousMetrics.doc_to_warm),
+      isBottleneck: bottleneck.name === '資料請求→ウォームコール'
+    },
+    {
+      label: 'ウォームコール→アポ',
+      rate: currentMetrics.warm_to_appt.toFixed(1) + '%',
+      numerator: currentMetrics.appt,
+      denominator: currentMetrics.warm_call,
+      change: calculateChange(currentMetrics.warm_to_appt, previousMetrics.warm_to_appt),
+      isBottleneck: bottleneck.name === 'ウォームコール→アポ',
+      hideInV1: true
+    },
+    {
+      label: 'アポ→受注',
+      rate: currentMetrics.appt_to_won.toFixed(1) + '%',
+      numerator: currentMetrics.won,
+      denominator: currentMetrics.appt,
+      change: calculateChange(currentMetrics.appt_to_won, previousMetrics.appt_to_won),
+      isBottleneck: bottleneck.name === 'アポ→受注',
+      hideInV1: true
+    }
+  ], [currentMetrics, previousMetrics, bottleneck]);
+
+  const visibleConversionRates = useMemo(
+    () => showPaidSections ? conversionRates : conversionRates.filter(r => !r.hideInV1),
+    [conversionRates, showPaidSections]
+  );
 
   const trendData = useMemo(() => {
     const dailyData = {};
@@ -446,6 +622,20 @@ const Dashboard = () => {
                 CSV
               </button>
               <button 
+                onClick={() => setShowThresholdModal(true)}
+                className="px-3 py-2 border border-gray-300 rounded-lg bg-white hover:bg-gray-50 flex items-center gap-2 text-sm"
+              >
+                <AlertTriangle className="w-4 h-4" />
+                閾値
+              </button>
+              <button 
+                onClick={saveTemplate}
+                className="px-3 py-2 border border-gray-300 rounded-lg bg-white hover:bg-gray-50 flex items-center gap-2 text-sm"
+              >
+                <Save className="w-4 h-4" />
+                保存
+              </button>
+              <button 
                 onClick={() => setMode(mode === 'v1.0' ? 'v1.1' : 'v1.0')}
                 className="px-3 py-2 border border-gray-300 rounded-lg bg-white hover:bg-gray-50 text-sm"
               >
@@ -496,87 +686,382 @@ const Dashboard = () => {
               </button>
             )}
           </div>
+
+          {anomalies.length > 0 && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+              <div className="flex items-start gap-3">
+                <AlertTriangle className="w-5 h-5 text-red-600 mt-0.5" />
+                <div className="flex-1">
+                  <h3 className="font-semibold text-red-900 mb-2">異常検知</h3>
+                  <div className="space-y-1">
+                    {anomalies.map((a, i) => {
+                      const cmpText = a.status === 'high' ? '以下' : '以上';
+                      return (
+                        <p key={i} className="text-sm text-red-800">
+                          {a.type}: {a.value.toFixed(2)}{a.unit} （閾値: {a.threshold}{a.unit}{cmpText}）
+                        </p>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-4">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="w-5 h-5 text-amber-600 mt-0.5" />
+              <div className="flex-1">
+                <h3 className="font-semibold text-amber-900 mb-1">ボトルネック検出</h3>
+                <p className="text-sm text-amber-800">
+                  <span className="font-semibold">{bottleneck.name}</span> の遷移率が最も低くなっています（{bottleneck.rate.toFixed(1)}%）
+                </p>
+                <p className="text-sm text-amber-700 mt-1">💡 {bottleneck.hint}</p>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div className="grid grid-cols-2 gap-4 mb-4">
           {metricsCards.slice(0, 2).map((metric) => {
             const Icon = metric.icon;
+            const isPositive = metric.change >= 0;
             return (
               <div key={metric.id} className="bg-white rounded-lg p-6 shadow-sm border-2 border-gray-200">
                 <div className="flex items-center gap-2 mb-4 text-gray-600 text-sm">
                   <Icon className="w-4 h-4" />
                   <span>{metric.label}</span>
                 </div>
-                <div className="text-3xl font-bold text-gray-900">{metric.value}</div>
+                <div className="text-3xl font-bold text-gray-900 mb-2">{metric.value}</div>
+                <div className="flex items-center gap-2 mb-3">
+                  <span className={isPositive ? 'text-green-600 text-sm' : 'text-red-600 text-sm'}>
+                    {isPositive ? <TrendingUp className="w-3 h-3 inline" /> : <TrendingDown className="w-3 h-3 inline" />}
+                    {' '}{isNaN(metric.change) ? 'N/A' : Math.abs(metric.change).toFixed(1) + '%'}
+                  </span>
+                  <span className="text-gray-500 text-xs">vs 前同期間</span>
+                </div>
+                <div className="text-xs text-gray-500">
+                  分子/分母: {metric.numerator} / {metric.denominator}
+                </div>
               </div>
             );
           })}
         </div>
 
         <div className={`grid gap-4 mb-6 ${showPaidSections ? 'grid-cols-6' : 'grid-cols-4'}`}>
-          {metricsCards.slice(2).filter(m => showPaidSections || !m.hideInV1).map((metric) => {
+          {metricsCards.slice(2).filter(m => showPaidSections || !m.hideInV1).map((metric, idx) => {
             const Icon = metric.icon;
+            const isPositive = metric.change >= 0;
+            const filtered = metricsCards.slice(2).filter(m => showPaidSections || !m.hideInV1);
             return (
-              <div key={metric.id} className="bg-white rounded-lg p-5 shadow-sm border-2 border-gray-200 cursor-pointer hover:border-blue-500 transition-all relative">
+              <div 
+                key={metric.id}
+                className="bg-white rounded-lg p-5 shadow-sm border-2 border-gray-200 cursor-pointer hover:border-blue-500 transition-all relative"
+              >
                 <div className="flex items-center gap-2 mb-3 text-gray-600 text-xs">
                   <Icon className="w-4 h-4" />
                   <span>{metric.label}</span>
                 </div>
                 <div className="text-2xl font-bold text-gray-900 mb-2">{metric.value}</div>
+                <div className="flex items-center gap-1 mb-2">
+                  <span className={isPositive ? 'text-green-600 text-xs' : 'text-red-600 text-xs'}>
+                    {isPositive ? '▲' : '▼'} {isNaN(metric.change) ? 'N/A' : Math.abs(metric.change).toFixed(1) + '%'}
+                  </span>
+                </div>
                 <div className="text-xs text-gray-600">到達率: {metric.reach?.toFixed(1)}%</div>
+                <div 
+                  className="absolute bottom-0 left-0 right-0 h-1 rounded-b-lg"
+                  style={{ backgroundColor: getColorCode(metric.color) }}
+                ></div>
+                {idx < filtered.length - 1 && (
+                  <div className="absolute -right-2 top-1/2 transform -translate-y-1/2 z-10">
+                    <div className="w-4 h-4 bg-gray-300 rounded-full flex items-center justify-center">
+                      <div className="w-0 h-0 border-t-4 border-t-transparent border-l-4 border-l-gray-600 border-b-4 border-b-transparent"></div>
+                    </div>
+                  </div>
+                )}
               </div>
             );
           })}
         </div>
 
-        <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200 mb-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">トレンド分析</h2>
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={trendData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-              <XAxis 
-                dataKey="date" 
-                stroke="#9ca3af"
-                tick={{ fontSize: 10 }}
-                tickFormatter={(value) => {
-                  const date = new Date(value);
-                  return `${date.getMonth() + 1}/${date.getDate()}`;
-                }}
-              />
-              <YAxis stroke="#9ca3af" />
-              <Tooltip />
-              <Legend />
-              <Line type="monotone" dataKey="pv" stroke="#3b82f6" strokeWidth={2} name="PV数" dot={false} />
-              <Line type="monotone" dataKey="doc_req" stroke="#10b981" strokeWidth={2} name="資料請求" dot={false} />
-              <Line type="monotone" dataKey="warm_call" stroke="#f59e0b" strokeWidth={2} name="ウォームコール" dot={false} />
-              {showPaidSections && <Line type="monotone" dataKey="appt" stroke="#ef4444" strokeWidth={2} name="アポ" dot={false} />}
-              {showPaidSections && <Line type="monotone" dataKey="won" stroke="#8b5cf6" strokeWidth={2} name="受注" dot={false} />}
-            </LineChart>
-          </ResponsiveContainer>
+        {!showPaidSections && (
+          <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6 text-center">
+            <p className="text-sm text-gray-600">
+              💡 v1.1モードに切り替えると、アポ数・受注数が表示されます
+            </p>
+          </div>
+        )}
+
+        <div className={`grid gap-4 mb-8 ${showPaidSections ? 'grid-cols-5' : 'grid-cols-3'}`}>
+          {visibleConversionRates.map((rate, idx) => {
+            const isBottleneck = rate.isBottleneck;
+            const isPositive = rate.change >= 0;
+            return (
+              <div 
+                key={idx} 
+                className={`bg-white rounded-lg p-6 shadow-sm transition-all ${isBottleneck ? 'border-2 border-red-500 ring-2 ring-red-200' : 'border border-gray-200'}`}
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <div className="text-sm text-gray-600">{rate.label}</div>
+                  {isBottleneck && <AlertTriangle className="w-4 h-4 text-red-500" />}
+                </div>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="text-2xl font-bold text-gray-900">{rate.rate}</div>
+                  <div className={`px-3 py-1 rounded-full text-sm ${isPositive ? 'bg-gray-900 text-white' : 'bg-red-500 text-white'}`}>
+                    {isPositive ? '+' : ''}{rate.change.toFixed(1)}%
+                  </div>
+                </div>
+                <div className="text-xs text-gray-500">
+                  {rate.numerator} / {rate.denominator}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="grid grid-cols-2 gap-6 mb-6">
+          <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+            <h2 className="text-xl font-bold text-gray-900 mb-2">営業プロセス分析</h2>
+            <p className="text-sm text-gray-600 mb-6">各段階での数値と状況</p>
+            <div className="space-y-4">
+              {metricsCards.slice(2).filter(m => showPaidSections || !m.hideInV1).map((item, idx) => {
+                const Icon = item.icon;
+                const filteredCards = metricsCards.slice(2).filter(m => showPaidSections || !m.hideInV1);
+                const maxValue = Math.max(...filteredCards.map(m => parseFloat(m.value.replace(/,/g, '')) || 0));
+                const currentValue = parseFloat(item.value.replace(/,/g, ''));
+                const percentage = Math.max(0, Math.min(100, (currentValue / maxValue) * 100));
+                
+                return (
+                  <div key={idx} className="flex items-center gap-4">
+                    <div className="flex items-center gap-3 w-44">
+                      <Icon className="w-4 h-4 text-gray-400" />
+                      <span className="text-sm text-gray-700">{item.label}</span>
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3">
+                        <div className="flex-1 bg-gray-200 rounded-full h-3 overflow-hidden">
+                          <div 
+                            className="h-full rounded-full transition-all duration-500"
+                            style={{ 
+                              width: `${percentage}%`,
+                              backgroundColor: getColorCode(item.color)
+                            }}
+                          ></div>
+                        </div>
+                        <span className="text-sm font-semibold text-gray-900 w-24">{item.value}</span>
+                        <span className="text-xs text-gray-500 w-20 text-right">{item.reach?.toFixed(1)}%</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+            <h2 className="text-xl font-bold text-gray-900 mb-2">トレンド分析</h2>
+            <p className="text-sm text-gray-600 mb-6">時系列推移</p>
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={trendData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                <XAxis 
+                  dataKey="date" 
+                  stroke="#9ca3af"
+                  tick={{ fontSize: 10 }}
+                  tickFormatter={(value) => {
+                    const date = new Date(value);
+                    return `${date.getMonth() + 1}/${date.getDate()}`;
+                  }}
+                />
+                <YAxis stroke="#9ca3af" />
+                <Tooltip />
+                <Legend />
+                <Line type="monotone" dataKey="pv" stroke="#3b82f6" strokeWidth={2} name="PV数" dot={false} />
+                <Line type="monotone" dataKey="doc_req" stroke="#10b981" strokeWidth={2} name="資料請求" dot={false} />
+                <Line type="monotone" dataKey="warm_call" stroke="#f59e0b" strokeWidth={2} name="ウォームコール" dot={false} />
+                {showPaidSections && <Line type="monotone" dataKey="appt" stroke="#ef4444" strokeWidth={2} name="アポ" dot={false} />}
+                {showPaidSections && <Line type="monotone" dataKey="won" stroke="#8b5cf6" strokeWidth={2} name="受注" dot={false} />}
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
         </div>
 
         <div className="grid grid-cols-4 gap-4 mb-6">
           <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
             <div className="text-sm text-gray-600 mb-2">CTR</div>
             <div className="text-2xl font-bold text-gray-900">{fmtP(currentMetrics.ctr, 2)}</div>
+            <div className={`text-sm mt-2 ${currentMetrics.ctr >= thresholds.global.ctr_min ? 'text-green-600' : 'text-red-600'}`}>
+              {currentMetrics.ctr >= thresholds.global.ctr_min ? '✓ 正常' : '⚠ 閾値以下'}
+            </div>
+            <div className="text-xs text-gray-500 mt-1">
+              {fmtN(currentMetrics.clicks)} / {fmtN(currentMetrics.impressions)}
+            </div>
           </div>
+
           <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
             <div className="text-sm text-gray-600 mb-2">CPL</div>
             <div className="text-2xl font-bold text-gray-900">¥{fmtN(currentMetrics.cpl)}</div>
+            <div className={`text-sm mt-2 ${currentMetrics.cpl <= thresholds.global.cpl_max ? 'text-green-600' : 'text-red-600'}`}>
+              {currentMetrics.cpl <= thresholds.global.cpl_max ? '✓ 正常' : '⚠ 閾値超過'}
+            </div>
+            <div className="text-xs text-gray-500 mt-1">
+              ¥{fmtN(currentMetrics.spend)} / {fmtN(currentMetrics.leads_total)}
+            </div>
           </div>
+
           <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
             <div className="text-sm text-gray-600 mb-2">有効率</div>
             <div className="text-2xl font-bold text-gray-900">{fmtP(currentMetrics.valid_rate)}</div>
+            <div className={`text-sm mt-2 ${currentMetrics.valid_rate >= thresholds.global.valid_rate_min ? 'text-green-600' : 'text-red-600'}`}>
+              {currentMetrics.valid_rate >= thresholds.global.valid_rate_min ? '✓ 正常' : '⚠ 閾値以下'}
+            </div>
+            <div className="text-xs text-gray-500 mt-1">
+              {fmtN(currentMetrics.leads_valid)} / {fmtN(currentMetrics.delivery_total)}
+            </div>
           </div>
+
           <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
             <div className="text-sm text-gray-600 mb-2">交換率</div>
             <div className="text-2xl font-bold text-gray-900">{fmtP(currentMetrics.exchange_rate)}</div>
+            <div className={`text-sm mt-2 ${currentMetrics.exchange_rate <= thresholds.global.exch_rate_max ? 'text-green-600' : 'text-red-600'}`}>
+              {currentMetrics.exchange_rate <= thresholds.global.exch_rate_max ? '✓ 正常' : '⚠ 閾値超過'}
+            </div>
+            <div className="text-xs text-gray-500 mt-1">
+              {fmtN(currentMetrics.leads_exchanged)} / {fmtN(currentMetrics.delivery_total)}
+            </div>
           </div>
         </div>
 
-        <div className="text-center text-sm text-gray-500">
+        {savedTemplates.length > 0 && (
+          <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200 mb-6">
+            <h3 className="text-lg font-bold text-gray-900 mb-4">保存済みテンプレート</h3>
+            <div className="space-y-2">
+              {savedTemplates.map((template) => (
+                <div key={template.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div className="flex-1">
+                    <div className="font-semibold text-sm">{template.name}</div>
+                    <div className="text-xs text-gray-600">
+                      期間: {template.period}日
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <button 
+                      onClick={() => applyTemplate(template)}
+                      className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
+                    >
+                      適用
+                    </button>
+                    <button 
+                      onClick={() => deleteTemplate(template.id)}
+                      className="px-3 py-1 bg-red-100 text-red-700 rounded text-sm hover:bg-red-200"
+                    >
+                      削除
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div className="text-center text-sm text-gray-500 mb-4">
           <p>Supabase連動ダッシュボード | 最終更新: {new Date().toLocaleString('ja-JP')}</p>
         </div>
+        {showThresholdModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-bold text-gray-900">閾値設定</h3>
+                <button onClick={() => setShowThresholdModal(false)} className="text-gray-400 hover:text-gray-600">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">CTR 最小値 (%)</label>
+                  <input 
+                    type="number" 
+                    step="0.1"
+                    value={thresholds.global.ctr_min}
+                    onChange={(e) => setThresholds(t => ({ 
+                      ...t, 
+                      global: { ...t.global, ctr_min: toNum(e.target.value, t.global.ctr_min) }
+                    }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">CPL 最大値 (円)</label>
+                  <input 
+                    type="number" 
+                    step="100"
+                    value={thresholds.global.cpl_max}
+                    onChange={(e) => setThresholds(t => ({ 
+                      ...t, 
+                      global: { ...t.global, cpl_max: toNum(e.target.value, t.global.cpl_max) }
+                    }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">有効率 最小値 (%)</label>
+                  <input 
+                    type="number" 
+                    step="1"
+                    value={thresholds.global.valid_rate_min}
+                    onChange={(e) => setThresholds(t => ({ 
+                      ...t, 
+                      global: { ...t.global, valid_rate_min: toNum(e.target.value, t.global.valid_rate_min) }
+                    }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">交換率 最大値 (%)</label>
+                  <input 
+                    type="number" 
+                    step="1"
+                    value={thresholds.global.exch_rate_max}
+                    onChange={(e) => setThresholds(t => ({ 
+                      ...t, 
+                      global: { ...t.global, exch_rate_max: toNum(e.target.value, t.global.exch_rate_max) }
+                    }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">CVR 最小値 (%)</label>
+                  <input 
+                    type="number" 
+                    step="0.1"
+                    value={thresholds.global.cvr_min}
+                    onChange={(e) => setThresholds(t => ({ 
+                      ...t, 
+                      global: { ...t.global, cvr_min: toNum(e.target.value, t.global.cvr_min) }
+                    }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                  />
+                </div>
+              </div>
+              <div className="mt-6 flex gap-3">
+                <button 
+                  onClick={() => setShowThresholdModal(false)}
+                  className="flex-1 px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800"
+                >
+                  保存
+                </button>
+                <button 
+                  onClick={() => setShowThresholdModal(false)}
+                  className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+                >
+                  キャンセル
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {showAddDataModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -622,6 +1107,18 @@ const Dashboard = () => {
                   </select>
                 </div>
                 <div>
+                  <label className="block text-sm font-medium mb-1">キャンペーン</label>
+                  <select 
+                    value={newData.campaign}
+                    onChange={(e) => setNewData({...newData, campaign: e.target.value})}
+                    className="w-full px-3 py-2 border rounded-lg"
+                  >
+                    <option value="キャンペーンA">キャンペーンA</option>
+                    <option value="キャンペーンB">キャンペーンB</option>
+                    <option value="キャンペーンC">キャンペーンC</option>
+                  </select>
+                </div>
+                <div>
                   <label className="block text-sm font-medium mb-1">インプレッション</label>
                   <input 
                     type="number" 
@@ -640,11 +1137,119 @@ const Dashboard = () => {
                   />
                 </div>
                 <div>
+                  <label className="block text-sm font-medium mb-1">広告費用 (円)</label>
+                  <input 
+                    type="number" 
+                    value={newData.spend}
+                    onChange={(e) => setNewData({...newData, spend: parseInt(e.target.value) || 0})}
+                    className="w-full px-3 py-2 border rounded-lg"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">リード総数</label>
+                  <input 
+                    type="number" 
+                    value={newData.leads_total}
+                    onChange={(e) => setNewData({...newData, leads_total: parseInt(e.target.value) || 0})}
+                    className="w-full px-3 py-2 border rounded-lg"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">有効リード数</label>
+                  <input 
+                    type="number" 
+                    value={newData.leads_valid}
+                    onChange={(e) => setNewData({...newData, leads_valid: parseInt(e.target.value) || 0})}
+                    className="w-full px-3 py-2 border rounded-lg"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">交換リード数</label>
+                  <input 
+                    type="number" 
+                    value={newData.leads_exchanged}
+                    onChange={(e) => setNewData({...newData, leads_exchanged: parseInt(e.target.value) || 0})}
+                    className="w-full px-3 py-2 border rounded-lg"
+                  />
+                </div>
+                <div>
                   <label className="block text-sm font-medium mb-1">PV数</label>
                   <input 
                     type="number" 
                     value={newData.pv}
                     onChange={(e) => setNewData({...newData, pv: parseInt(e.target.value) || 0})}
+                    className="w-full px-3 py-2 border rounded-lg"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">資料請求数</label>
+                  <input 
+                    type="number" 
+                    value={newData.doc_req}
+                    onChange={(e) => setNewData({...newData, doc_req: parseInt(e.target.value) || 0})}
+                    className="w-full px-3 py-2 border rounded-lg"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">ウォームコール数</label>
+                  <input 
+                    type="number" 
+                    value={newData.warm_call}
+                    onChange={(e) => setNewData({...newData, warm_call: parseInt(e.target.value) || 0})}
+                    className="w-full px-3 py-2 border rounded-lg"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">アポ数</label>
+                  <input 
+                    type="number" 
+                    value={newData.appt}
+                    onChange={(e) => setNewData({...newData, appt: parseInt(e.target.value) || 0})}
+                    className="w-full px-3 py-2 border rounded-lg"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">受注数</label>
+                  <input 
+                    type="number" 
+                    value={newData.won}
+                    onChange={(e) => setNewData({...newData, won: parseInt(e.target.value) || 0})}
+                    className="w-full px-3 py-2 border rounded-lg"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">サンプル提示数</label>
+                  <input 
+                    type="number" 
+                    value={newData.sample_presented}
+                    onChange={(e) => setNewData({...newData, sample_presented: parseInt(e.target.value) || 0})}
+                    className="w-full px-3 py-2 border rounded-lg"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">サンプル承認数</label>
+                  <input 
+                    type="number" 
+                    value={newData.sample_approved}
+                    onChange={(e) => setNewData({...newData, sample_approved: parseInt(e.target.value) || 0})}
+                    className="w-full px-3 py-2 border rounded-lg"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">納品総数</label>
+                  <input 
+                    type="number" 
+                    value={newData.delivery_total}
+                    onChange={(e) => setNewData({...newData, delivery_total: parseInt(e.target.value) || 0})}
+                    className="w-full px-3 py-2 border rounded-lg"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">SLA遵守納品数</label>
+                  <input 
+                    type="number" 
+                    value={newData.delivery_on_sla}
+                    onChange={(e) => setNewData({...newData, delivery_on_sla: parseInt(e.target.value) || 0})}
                     className="w-full px-3 py-2 border rounded-lg"
                   />
                 </div>

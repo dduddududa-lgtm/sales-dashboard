@@ -777,6 +777,20 @@ const Dashboard = () => {
               >
                 <Plus className="w-4 h-4" />
                 データ追加
+                <button 
+                onClick={() => setShowUploadModal(true)}
+                className="px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2 text-sm"
+              >
+                <Upload className="w-4 h-4" />
+                CSV
+              </button>
+              <button 
+                onClick={() => setShowGoalModal(true)}
+                className="px-3 py-2 border border-gray-300 rounded-lg bg-white hover:bg-gray-50 flex items-center gap-2 text-sm"
+              >
+                <Target className="w-4 h-4" />
+                目標
+              </button>
               </button>
               <button 
                 onClick={() => setShowThresholdModal(true)}
@@ -1056,6 +1070,62 @@ const Dashboard = () => {
           <p>Supabase連動ダッシュボード | 最終更新: {new Date().toLocaleString('ja-JP')}</p>
         </div>
       </div>
+      <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200 mb-6">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-bold text-gray-900">データ管理</h2>
+            <button
+              onClick={() => setShowDataTable(!showDataTable)}
+              className="px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 text-sm"
+            >
+              {showDataTable ? 'テーブルを閉じる' : 'データテーブルを表示'}
+            </button>
+          </div>
+          
+          {showDataTable && (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-2 text-left">日付</th>
+                    <th className="px-4 py-2 text-left">テーマ</th>
+                    <th className="px-4 py-2 text-left">チャネル</th>
+                    <th className="px-4 py-2 text-right">PV</th>
+                    <th className="px-4 py-2 text-right">資料請求</th>
+                    <th className="px-4 py-2 text-right">ウォームコール</th>
+                    <th className="px-4 py-2 text-center">操作</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredData.slice(0, 20).map((row) => (
+                    <tr key={row.id} className="border-t hover:bg-gray-50">
+                      <td className="px-4 py-2">{row.date}</td>
+                      <td className="px-4 py-2">{row.theme}</td>
+                      <td className="px-4 py-2">{row.channel}</td>
+                      <td className="px-4 py-2 text-right">{fmtN(row.pv)}</td>
+                      <td className="px-4 py-2 text-right">{fmtN(row.doc_req)}</td>
+                      <td className="px-4 py-2 text-right">{fmtN(row.warm_call)}</td>
+                      <td className="px-4 py-2 text-center">
+                        <div className="flex justify-center gap-2">
+                          <button
+                            onClick={() => {
+                              setEditingData(row);
+                              setShowEditModal(true);
+                            }}
+                            className="p-1 text-blue-600 hover:bg-blue-50 rounded"
+                          >
+                            <Edit2 className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => deleteData(row.id)}
+                            className="p-1 text-red-600 hover:bg-red-50 rounded"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
 
       {showThresholdModal && (
         <ThresholdModal 

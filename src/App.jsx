@@ -1117,5 +1117,362 @@ const ThresholdModal = ({ thresholds, onSave, onClose }) => {
     </div>
   );
 };
+const AddDataModal = ({ newData, setNewData, onSave, onClose }) => {
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg p-8 max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-2xl font-bold text-gray-900">データ追加</h2>
+          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg">
+            <X className="w-5 h-5 text-gray-500" />
+          </button>
+        </div>
 
+        <div className="grid grid-cols-2 gap-4 mb-6">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">日付</label>
+            <input
+              type="date"
+              value={newData.date}
+              onChange={(e) => setNewData({...newData, date: e.target.value})}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">テーマ</label>
+            <select
+              value={newData.theme}
+              onChange={(e) => setNewData({...newData, theme: e.target.value})}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+            >
+              <option value="Sansan">Sansan</option>
+              <option value="ビズリーチ">ビズリーチ</option>
+              <option value="SmartHR">SmartHR</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">チャネル</label>
+            <select
+              value={newData.channel}
+              onChange={(e) => setNewData({...newData, channel: e.target.value})}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+            >
+              <option value="Meta">Meta</option>
+              <option value="Google">Google</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">キャンペーン</label>
+            <select
+              value={newData.campaign}
+              onChange={(e) => setNewData({...newData, campaign: e.target.value})}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+            >
+              <option value="キャンペーンA">キャンペーンA</option>
+              <option value="キャンペーンB">キャンペーンB</option>
+              <option value="キャンペーンC">キャンペーンC</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">週</label>
+            <input
+              type="number"
+              value={newData.week}
+              onChange={(e) => setNewData({...newData, week: parseInt(e.target.value) || 1})}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+              min="1"
+              max="4"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">インプレッション</label>
+            <input
+              type="number"
+              value={newData.impressions}
+              onChange={(e) => setNewData({...newData, impressions: parseInt(e.target.value) || 0})}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">クリック</label>
+            <input
+              type="number"
+              value={newData.clicks}
+              onChange={(e) => setNewData({...newData, clicks: parseInt(e.target.value) || 0})}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">費用</label>
+            <input
+              type="number"
+              value={newData.spend}
+              onChange={(e) => setNewData({...newData, spend: parseInt(e.target.value) || 0})}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">PV</label>
+            <input
+              type="number"
+              value={newData.pv}
+              onChange={(e) => setNewData({...newData, pv: parseInt(e.target.value) || 0})}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">資料請求</label>
+            <input
+              type="number"
+              value={newData.doc_req}
+              onChange={(e) => setNewData({...newData, doc_req: parseInt(e.target.value) || 0})}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">ウォームコール</label>
+            <input
+              type="number"
+              value={newData.warm_call}
+              onChange={(e) => setNewData({...newData, warm_call: parseInt(e.target.value) || 0})}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">アポ</label>
+            <input
+              type="number"
+              value={newData.appt}
+              onChange={(e) => setNewData({...newData, appt: parseInt(e.target.value) || 0})}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">受注</label>
+            <input
+              type="number"
+              value={newData.won}
+              onChange={(e) => setNewData({...newData, won: parseInt(e.target.value) || 0})}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+            />
+          </div>
+        </div>
+
+        <div className="flex gap-3">
+          <button
+            onClick={onClose}
+            className="flex-1 px-4 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
+          >
+            キャンセル
+          </button>
+          <button
+            onClick={onSave}
+            className="flex-1 px-4 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+          >
+            保存
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const UploadModal = ({ onUpload, onDownloadSample, onClose }) => {
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg p-8 max-w-lg w-full mx-4">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-2xl font-bold text-gray-900">CSVアップロード</h2>
+          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg">
+            <X className="w-5 h-5 text-gray-500" />
+          </button>
+        </div>
+
+        <div className="mb-6">
+          <p className="text-sm text-gray-600 mb-4">
+            CSVファイルをアップロードしてデータを一括追加できます。
+          </p>
+          <button
+            onClick={onDownloadSample}
+            className="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 mb-4 flex items-center justify-center gap-2"
+          >
+            <Download className="w-4 h-4" />
+            サンプルCSVをダウンロード
+          </button>
+          <input
+            type="file"
+            accept=".csv"
+            onChange={onUpload}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+          />
+        </div>
+
+        <button
+          onClick={onClose}
+          className="w-full px-4 py-3 bg-gray-900 text-white rounded-lg hover:bg-gray-800"
+        >
+          閉じる
+        </button>
+      </div>
+    </div>
+  );
+};
+
+const EditModal = ({ data, setData, onSave, onClose }) => {
+  if (!data) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg p-8 max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-2xl font-bold text-gray-900">データ編集</h2>
+          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg">
+            <X className="w-5 h-5 text-gray-500" />
+          </button>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4 mb-6">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">PV</label>
+            <input
+              type="number"
+              value={data.pv}
+              onChange={(e) => setData({...data, pv: parseInt(e.target.value) || 0})}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">資料請求</label>
+            <input
+              type="number"
+              value={data.doc_req}
+              onChange={(e) => setData({...data, doc_req: parseInt(e.target.value) || 0})}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">ウォームコール</label>
+            <input
+              type="number"
+              value={data.warm_call}
+              onChange={(e) => setData({...data, warm_call: parseInt(e.target.value) || 0})}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">アポ</label>
+            <input
+              type="number"
+              value={data.appt}
+              onChange={(e) => setData({...data, appt: parseInt(e.target.value) || 0})}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">受注</label>
+            <input
+              type="number"
+              value={data.won}
+              onChange={(e) => setData({...data, won: parseInt(e.target.value) || 0})}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+            />
+          </div>
+        </div>
+
+        <div className="flex gap-3">
+          <button
+            onClick={onClose}
+            className="flex-1 px-4 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
+          >
+            キャンセル
+          </button>
+          <button
+            onClick={onSave}
+            className="flex-1 px-4 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+          >
+            保存
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const GoalModal = ({ goals, setGoals, onSave, onClose }) => {
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg p-8 max-w-lg w-full mx-4">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-2xl font-bold text-gray-900">目標設定</h2>
+          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg">
+            <X className="w-5 h-5 text-gray-500" />
+          </button>
+        </div>
+
+        <div className="space-y-4 mb-6">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">PV目標</label>
+            <input
+              type="number"
+              value={goals.pv}
+              onChange={(e) => setGoals({...goals, pv: parseInt(e.target.value) || 0})}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">資料請求目標</label>
+            <input
+              type="number"
+              value={goals.doc_req}
+              onChange={(e) => setGoals({...goals, doc_req: parseInt(e.target.value) || 0})}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">ウォームコール目標</label>
+            <input
+              type="number"
+              value={goals.warm_call}
+              onChange={(e) => setGoals({...goals, warm_call: parseInt(e.target.value) || 0})}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">アポ目標</label>
+            <input
+              type="number"
+              value={goals.appt}
+              onChange={(e) => setGoals({...goals, appt: parseInt(e.target.value) || 0})}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">受注目標</label>
+            <input
+              type="number"
+              value={goals.won}
+              onChange={(e) => setGoals({...goals, won: parseInt(e.target.value) || 0})}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+            />
+          </div>
+        </div>
+
+        <div className="flex gap-3">
+          <button
+            onClick={onClose}
+            className="flex-1 px-4 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
+          >
+            キャンセル
+          </button>
+          <button
+            onClick={onSave}
+            className="flex-1 px-4 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+          >
+            保存
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
 export default Dashboard;

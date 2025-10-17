@@ -1207,6 +1207,8 @@ const Dashboard = () => {
           <p>Supabase連動ダッシュボード | 最終更新: {new Date().toLocaleString('ja-JP')}</p>
         </div>
       </div>
+      </div>
+      </div>
 
       {showThresholdModal && (
         <ThresholdModal 

@@ -1127,6 +1127,21 @@ const Dashboard = () => {
                   ))}
                 </tbody>
 
+              </table>
+              {filteredData.length > 20 && (
+                <div className="mt-4 text-center text-sm text-gray-600">
+                  最初の20件を表示中（全{filteredData.length}件）
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        <div className="text-center text-sm text-gray-500 mb-4">
+          <p>Supabase連動ダッシュボード | 最終更新: {new Date().toLocaleString('ja-JP')}</p>
+        </div>
+      </div>
+
       {showThresholdModal && (
         <ThresholdModal 
           thresholds={thresholds}

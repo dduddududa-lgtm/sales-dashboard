@@ -46,13 +46,6 @@ const Dashboard = () => {
     appt: 200,
     won: 50
   });
-  const [aggregationView, setAggregationView] = useState('daily');
-  const [compareMode, setCompareMode] = useState(false);
-  const [compareFilters, setCompareFilters] = useState({
-    theme: 'all',
-    channel: 'all',
-    campaign: 'all'
-  });
   
   const [newData, setNewData] = useState({
     date: new Date().toISOString().split('T')[0],
@@ -78,12 +71,12 @@ const Dashboard = () => {
   });
 
   const showPaidSections = mode === 'v1.1';
+
   useEffect(() => {
     loadData();
     loadTemplates();
     loadGoals();
   }, []);
-
   const loadData = async () => {
     try {
       setLoading(true);
@@ -382,26 +375,6 @@ const Dashboard = () => {
     });
   }, [rawData, period, filters]);
 
-  const compareData = useMemo(() => {
-    if (!compareMode) return [];
-    
-    const endDate = new Date();
-    endDate.setHours(23, 59, 59, 999);
-    const startDate = new Date();
-    startDate.setDate(startDate.getDate() - (period - 1));
-    startDate.setHours(0, 0, 0, 0);
-
-    return rawData.filter(d => {
-      const itemDate = new Date(d.date);
-      const inPeriod = itemDate >= startDate && itemDate <= endDate;
-      const matchTheme = compareFilters.theme === 'all' || d.theme === compareFilters.theme;
-      const matchChannel = compareFilters.channel === 'all' || d.channel === compareFilters.channel;
-      const matchCampaign = compareFilters.campaign === 'all' || d.campaign === compareFilters.campaign;
-      
-      return inPeriod && matchTheme && matchChannel && matchCampaign;
-    });
-  }, [rawData, period, compareFilters, compareMode]);
-
   const previousPeriodData = useMemo(() => {
     const endDate = new Date();
     endDate.setDate(endDate.getDate() - period);
@@ -475,7 +448,6 @@ const Dashboard = () => {
 
   const currentMetrics = useMemo(() => calculateMetrics(filteredData), [filteredData]);
   const previousMetrics = useMemo(() => calculateMetrics(previousPeriodData), [previousPeriodData]);
-  const compareMetrics = useMemo(() => compareMode ? calculateMetrics(compareData) : null, [compareData, compareMode]);
 
   const calculateChange = (current, previous) => {
     if (!isFinite(previous) || previous === 0) return NaN;
@@ -518,73 +490,6 @@ const Dashboard = () => {
 
   const bottleneck = findBottleneck();
 
-  const aggregatedData = useMemo(() => {
-    const grouped = {};
-    
-    filteredData.forEach(d => {
-      let key;
-      const date = new Date(d.date);
-      
-      if (aggregationView === 'daily') {
-        key = d.date;
-      } else if (aggregationView === 'weekly') {
-        const weekNum = Math.floor((date.getTime() - new Date(date.getFullYear(), 0, 1).getTime()) / (7 * 24 * 60 * 60 * 1000));
-        key = `${date.getFullYear()}-W${weekNum}`;
-      } else {
-        key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-      }
-      
-      if (!grouped[key]) {
-        grouped[key] = {
-          period: key,
-          impressions: 0,
-          clicks: 0,
-          spend: 0,
-          pv: 0,
-          doc_req: 0,
-          warm_call: 0,
-          appt: 0,
-          won: 0
-        };
-      }
-      
-      grouped[key].impressions += d.impressions || 0;
-      grouped[key].clicks += d.clicks || 0;
-      grouped[key].spend += d.spend || 0;
-      grouped[key].pv += d.pv || 0;
-      grouped[key].doc_req += d.doc_req || 0;
-      grouped[key].warm_call += d.warm_call || 0;
-      grouped[key].appt += d.appt || 0;
-      grouped[key].won += d.won || 0;
-    });
-    
-    return Object.values(grouped).sort((a, b) => a.period.localeCompare(b.period));
-  }, [filteredData, aggregationView]);
-
-  const themeDistribution = useMemo(() => {
-    const distribution = {};
-    filteredData.forEach(d => {
-      distribution[d.theme] = (distribution[d.theme] || 0) + (d.pv || 0);
-    });
-    return Object.entries(distribution).map(([name, value]) => ({ name, value }));
-  }, [filteredData]);
-
-  const channelDistribution = useMemo(() => {
-    const distribution = {};
-    filteredData.forEach(d => {
-      distribution[d.channel] = (distribution[d.channel] || 0) + (d.clicks || 0);
-    });
-    return Object.entries(distribution).map(([name, value]) => ({ name, value }));
-  }, [filteredData]);
-
-  const funnelData = useMemo(() => [
-    { stage: 'ターゲット', value: currentMetrics.target, percentage: 100 },
-    { stage: 'PV', value: currentMetrics.pv, percentage: currentMetrics.pv_reach },
-    { stage: '資料請求', value: currentMetrics.doc_req, percentage: currentMetrics.doc_reach },
-    { stage: 'ウォームコール', value: currentMetrics.warm_call, percentage: currentMetrics.warm_reach },
-    { stage: 'アポ', value: currentMetrics.appt, percentage: currentMetrics.appt_reach },
-    { stage: '受注', value: currentMetrics.won, percentage: currentMetrics.won_reach }
-  ], [currentMetrics]);
   const metricsCards = useMemo(() => [
     {
       id: 'sample_approval',
@@ -737,8 +642,6 @@ const Dashboard = () => {
     return Object.values(dailyData).sort((a, b) => new Date(a.date) - new Date(b.date));
   }, [filteredData]);
 
-  const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
-
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -771,7 +674,7 @@ const Dashboard = () => {
               </p>
             </div>
             <div className="flex gap-2 flex-wrap">
-             <button 
+              <button 
                 onClick={() => setShowAddDataModal(true)}
                 className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2 text-sm"
               >
@@ -1065,7 +968,6 @@ const Dashboard = () => {
             </ResponsiveContainer>
           </div>
         </div>
-
         <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200 mb-6">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-bold text-gray-900">データ管理</h2>
@@ -1136,78 +1038,6 @@ const Dashboard = () => {
           <p>Supabase連動ダッシュボード | 最終更新: {new Date().toLocaleString('ja-JP')}</p>
         </div>
       </div>
-      <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200 mb-6">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-bold text-gray-900">データ管理</h2>
-            <button
-              onClick={() => setShowDataTable(!showDataTable)}
-              className="px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 text-sm"
-            >
-              {showDataTable ? 'テーブルを閉じる' : 'データテーブルを表示'}
-            </button>
-          </div>
-          
-          {showDataTable && (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-4 py-2 text-left">日付</th>
-                    <th className="px-4 py-2 text-left">テーマ</th>
-                    <th className="px-4 py-2 text-left">チャネル</th>
-                    <th className="px-4 py-2 text-right">PV</th>
-                    <th className="px-4 py-2 text-right">資料請求</th>
-                    <th className="px-4 py-2 text-right">ウォームコール</th>
-                    <th className="px-4 py-2 text-center">操作</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredData.slice(0, 20).map((row) => (
-                    <tr key={row.id} className="border-t hover:bg-gray-50">
-                      <td className="px-4 py-2">{row.date}</td>
-                      <td className="px-4 py-2">{row.theme}</td>
-                      <td className="px-4 py-2">{row.channel}</td>
-                      <td className="px-4 py-2 text-right">{fmtN(row.pv)}</td>
-                      <td className="px-4 py-2 text-right">{fmtN(row.doc_req)}</td>
-                      <td className="px-4 py-2 text-right">{fmtN(row.warm_call)}</td>
-                      <td className="px-4 py-2 text-center">
-                        <div className="flex justify-center gap-2">
-                          <button
-                            onClick={() => {
-                              setEditingData(row);
-                              setShowEditModal(true);
-                            }}
-                            className="p-1 text-blue-600 hover:bg-blue-50 rounded"
-                          >
-                            <Edit2 className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => deleteData(row.id)}
-                            className="p-1 text-red-600 hover:bg-red-50 rounded"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-
-              </table>
-              {filteredData.length > 20 && (
-                <div className="mt-4 text-center text-sm text-gray-600">
-                  最初の20件を表示中（全{filteredData.length}件）
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-
-        <div className="text-center text-sm text-gray-500 mb-4">
-          <p>Supabase連動ダッシュボード | 最終更新: {new Date().toLocaleString('ja-JP')}</p>
-        </div>
-      </div>
-      </div>
 
       {showThresholdModal && (
         <ThresholdModal 
@@ -1217,6 +1047,44 @@ const Dashboard = () => {
             setShowThresholdModal(false);
           }}
           onClose={() => setShowThresholdModal(false)}
+        />
+      )}
+
+      {showAddDataModal && (
+        <AddDataModal 
+          newData={newData}
+          setNewData={setNewData}
+          onSave={addData}
+          onClose={() => setShowAddDataModal(false)}
+        />
+      )}
+
+      {showUploadModal && (
+        <UploadModal 
+          onUpload={handleCSVUpload}
+          onDownloadSample={downloadSampleCSV}
+          onClose={() => setShowUploadModal(false)}
+        />
+      )}
+
+      {showEditModal && editingData && (
+        <EditModal 
+          data={editingData}
+          setData={setEditingData}
+          onSave={updateData}
+          onClose={() => {
+            setShowEditModal(false);
+            setEditingData(null);
+          }}
+        />
+      )}
+
+      {showGoalModal && (
+        <GoalModal 
+          goals={goals}
+          setGoals={setGoals}
+          onSave={saveGoals}
+          onClose={() => setShowGoalModal(false)}
         />
       )}
     </div>
@@ -1269,6 +1137,7 @@ const ThresholdModal = ({ thresholds, onSave, onClose }) => {
     </div>
   );
 };
+
 const AddDataModal = ({ newData, setNewData, onSave, onClose }) => {
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -1324,44 +1193,6 @@ const AddDataModal = ({ newData, setNewData, onSave, onClose }) => {
               <option value="キャンペーンB">キャンペーンB</option>
               <option value="キャンペーンC">キャンペーンC</option>
             </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">週</label>
-            <input
-              type="number"
-              value={newData.week}
-              onChange={(e) => setNewData({...newData, week: parseInt(e.target.value) || 1})}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg"
-              min="1"
-              max="4"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">インプレッション</label>
-            <input
-              type="number"
-              value={newData.impressions}
-              onChange={(e) => setNewData({...newData, impressions: parseInt(e.target.value) || 0})}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">クリック</label>
-            <input
-              type="number"
-              value={newData.clicks}
-              onChange={(e) => setNewData({...newData, clicks: parseInt(e.target.value) || 0})}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">費用</label>
-            <input
-              type="number"
-              value={newData.spend}
-              onChange={(e) => setNewData({...newData, spend: parseInt(e.target.value) || 0})}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg"
-            />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">PV</label>
@@ -1549,7 +1380,6 @@ const EditModal = ({ data, setData, onSave, onClose }) => {
     </div>
   );
 };
-
 const GoalModal = ({ goals, setGoals, onSave, onClose }) => {
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -1627,4 +1457,5 @@ const GoalModal = ({ goals, setGoals, onSave, onClose }) => {
     </div>
   );
 };
+
 export default Dashboard;

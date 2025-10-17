@@ -1449,7 +1449,7 @@ const Dashboard = () => {
         </div>
         /span>
                     </div>
-                    <div className="flex-1">
+                  <div className="flex-1">
                       <div className="relative h-2 bg-gray-100 rounded-full overflow-hidden">
                         <div 
                           className="absolute left-0 top-0 h-full rounded-full transition-all"

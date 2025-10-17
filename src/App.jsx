@@ -43,14 +43,14 @@ const Dashboard = () => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showGoalModal, setShowGoalModal] = useState(false);
   const [goals, setGoals] = useState({
-    const [showReportModal, setShowReportModal] = useState(false);
-  const [reportType, setReportType] = useState('weekly');
     pv: 100000,
     doc_req: 5000,
     warm_call: 1000,
     appt: 200,
     won: 50
   });
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [reportType, setReportType] = useState('weekly');
   
   const [newData, setNewData] = useState({
     date: new Date().toISOString().split('T')[0],

@@ -35,8 +35,6 @@ const Dashboard = () => {
   const [showAddDataModal, setShowAddDataModal] = useState(false);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState('接続中...');
-  
-  // 새로운 기능 상태
   const [showDataTable, setShowDataTable] = useState(false);
   const [editingData, setEditingData] = useState(null);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -48,7 +46,7 @@ const Dashboard = () => {
     appt: 200,
     won: 50
   });
-  const [aggregationView, setAggregationView] = useState('daily'); // 'daily', 'weekly', 'monthly'
+  const [aggregationView, setAggregationView] = useState('daily');
   const [compareMode, setCompareMode] = useState(false);
   const [compareFilters, setCompareFilters] = useState({
     theme: 'all',
@@ -80,7 +78,6 @@ const Dashboard = () => {
   });
 
   const showPaidSections = mode === 'v1.1';
-
   useEffect(() => {
     loadData();
     loadTemplates();
@@ -350,7 +347,6 @@ const Dashboard = () => {
     a.click();
     URL.revokeObjectURL(url);
   };
-
   const getColorCode = (color) => {
     const colors = {
       blue: '#3b82f6',
@@ -366,10 +362,7 @@ const Dashboard = () => {
 
   const fmtN = (n) => Number.isFinite(n) ? Math.round(n).toLocaleString() : '–';
   const fmtP = (n, d = 1) => Number.isFinite(n) ? `${n.toFixed(d)}%` : 'N/A';
-  const toNum = (v, fallback) => {
-    const n = parseFloat(v);
-    return Number.isFinite(n) && n >= 0 ? n : fallback;
-  };
+  
   const filteredData = useMemo(() => {
     const endDate = new Date();
     endDate.setHours(23, 59, 59, 999);
@@ -592,7 +585,6 @@ const Dashboard = () => {
     { stage: 'アポ', value: currentMetrics.appt, percentage: currentMetrics.appt_reach },
     { stage: '受注', value: currentMetrics.won, percentage: currentMetrics.won_reach }
   ], [currentMetrics]);
-
   const metricsCards = useMemo(() => [
     {
       id: 'sample_approval',
@@ -787,25 +779,11 @@ const Dashboard = () => {
                 データ追加
               </button>
               <button 
-                onClick={() => setShowUploadModal(true)}
-                className="px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2 text-sm"
-              >
-                <Upload className="w-4 h-4" />
-                CSV
-              </button>
-              <button 
                 onClick={() => setShowThresholdModal(true)}
                 className="px-3 py-2 border border-gray-300 rounded-lg bg-white hover:bg-gray-50 flex items-center gap-2 text-sm"
               >
                 <AlertTriangle className="w-4 h-4" />
                 閾値
-              </button>
-              <button 
-                onClick={() => setShowGoalModal(true)}
-                className="px-3 py-2 border border-gray-300 rounded-lg bg-white hover:bg-gray-50 flex items-center gap-2 text-sm"
-              >
-                <Target className="w-4 h-4" />
-                目標
               </button>
               <button 
                 onClick={saveTemplate}
@@ -864,43 +842,7 @@ const Dashboard = () => {
                 クリア
               </button>
             )}
-            <div className="ml-auto">
-              <button
-                onClick={() => setCompareMode(!compareMode)}
-                className={`px-3 py-2 rounded-lg text-sm flex items-center gap-2 ${
-                  compareMode ? 'bg-blue-600 text-white' : 'border border-gray-300 bg-white hover:bg-gray-50'
-                }`}
-              >
-                <BarChart3 className="w-4 h-4" />
-                比較モード
-              </button>
-            </div>
           </div>
-
-          {compareMode && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-              <h3 className="font-semibold text-blue-900 mb-2">比較フィルター</h3>
-              <div className="flex gap-3 items-center flex-wrap">
-                <select value={compareFilters.theme} onChange={(e) => setCompareFilters({...compareFilters, theme: e.target.value})} className="px-3 py-2 border border-gray-300 rounded-lg bg-white text-sm">
-                  <option value="all">全テーマ</option>
-                  <option value="Sansan">Sansan</option>
-                  <option value="ビズリーチ">ビズリーチ</option>
-                  <option value="SmartHR">SmartHR</option>
-                </select>
-                <select value={compareFilters.channel} onChange={(e) => setCompareFilters({...compareFilters, channel: e.target.value})} className="px-3 py-2 border border-gray-300 rounded-lg bg-white text-sm">
-                  <option value="all">全チャネル</option>
-                  <option value="Meta">Meta</option>
-                  <option value="Google">Google</option>
-                </select>
-                <select value={compareFilters.campaign} onChange={(e) => setCompareFilters({...compareFilters, campaign: e.target.value})} className="px-3 py-2 border border-gray-300 rounded-lg bg-white text-sm">
-                  <option value="all">全キャンペーン</option>
-                  <option value="キャンペーンA">キャンペーンA</option>
-                  <option value="キャンペーンB">キャンペーンB</option>
-                  <option value="キャンペーンC">キャンペーンC</option>
-                </select>
-              </div>
-            </div>
-          )}
 
           {anomalies.length > 0 && (
             <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
@@ -1016,60 +958,6 @@ const Dashboard = () => {
           })}
         </div>
 
-        {!showPaidSections && (
-          <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6 text-center">
-            <p className="text-sm text-gray-600">
-              💡 v1.1モードに切り替えると、アポ数・受注数が表示されます
-            </p>
-          </div>
-        )}
-
-        {compareMode && compareMetrics && (
-          <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200 mb-6">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">比較分析</h2>
-            <div className="grid grid-cols-5 gap-4">
-              <div className="text-center">
-                <div className="text-sm text-gray-600 mb-2">PV数</div>
-                <div className="text-2xl font-bold text-gray-900">{currentMetrics.pv.toLocaleString()}</div>
-                <div className="text-xs text-gray-500">vs</div>
-                <div className="text-2xl font-bold text-blue-600">{compareMetrics.pv.toLocaleString()}</div>
-                <div className="text-xs text-gray-600 mt-1">
-                  {((currentMetrics.pv / compareMetrics.pv - 1) * 100).toFixed(1)}% 差
-                </div>
-              </div>
-              <div className="text-center">
-                <div className="text-sm text-gray-600 mb-2">資料請求</div>
-                <div className="text-2xl font-bold text-gray-900">{currentMetrics.doc_req.toLocaleString()}</div>
-                <div className="text-xs text-gray-500">vs</div>
-                <div className="text-2xl font-bold text-blue-600">{compareMetrics.doc_req.toLocaleString()}</div>
-                <div className="text-xs text-gray-600 mt-1">
-                  {((currentMetrics.doc_req / compareMetrics.doc_req - 1) * 100).toFixed(1)}% 差
-                </div>
-              </div>
-              <div className="text-center">
-                <div className="text-sm text-gray-600 mb-2">ウォームコール</div>
-                <div className="text-2xl font-bold text-gray-900">{currentMetrics.warm_call.toLocaleString()}</div>
-                <div className="text-xs text-gray-500">vs</div>
-                <div className="text-2xl font-bold text-blue-600">{compareMetrics.warm_call.toLocaleString()}</div>
-                <div className="text-xs text-gray-600 mt-1">
-                  {((currentMetrics.warm_call / compareMetrics.warm_call - 1) * 100).toFixed(1)}% 差
-                </div>
-              </div>
-              <div className="text-center">
-                <div className="text-sm text-gray-600 mb-2">CTR</div>
-                <div className="text-2xl font-bold text-gray-900">{currentMetrics.ctr.toFixed(2)}%</div>
-                <div className="text-xs text-gray-500">vs</div>
-                <div className="text-2xl font-bold text-blue-600">{compareMetrics.ctr.toFixed(2)}%</div>
-              </div>
-              <div className="text-center">
-                <div className="text-sm text-gray-600 mb-2">CPL</div>
-                <div className="text-2xl font-bold text-gray-900">¥{fmtN(currentMetrics.cpl)}</div>
-                <div className="text-xs text-gray-500">vs</div>
-                <div className="text-2xl font-bold text-blue-600">¥{fmtN(compareMetrics.cpl)}</div>
-              </div>
-            </div>
-          </div>
-        )}
         <div className={`grid gap-4 mb-8 ${showPaidSections ? 'grid-cols-5' : 'grid-cols-3'}`}>
           {visibleConversionRates.map((rate, idx) => {
             const isBottleneck = rate.isBottleneck;
@@ -1102,7 +990,7 @@ const Dashboard = () => {
             <h2 className="text-xl font-bold text-gray-900 mb-2">営業プロセス分析</h2>
             <p className="text-sm text-gray-600 mb-6">各段階での数値と状況</p>
             <div className="space-y-4">
-             {metricsCards.slice(2).filter(m => showPaidSections || !m.hideInV1).map((item, idx) => {
+              {metricsCards.slice(2).filter(m => showPaidSections || !m.hideInV1).map((item, idx) => {
                 const Icon = item.icon;
                 const filteredCards = metricsCards.slice(2).filter(m => showPaidSections || !m.hideInV1);
                 const maxValue = Math.max(...filteredCards.map(m => parseFloat(m.value.replace(/,/g, '')) || 0));
@@ -1128,7 +1016,7 @@ const Dashboard = () => {
                     </div>
                     <div className="text-right w-24">
                       <div className="text-lg font-bold text-gray-900">{item.value}</div>
-                      <div className="text-xs text-gray-500">{item.change}</div>
+                      <div className="text-xs text-gray-500">{isNaN(item.change) ? 'N/A' : item.change.toFixed(1) + '%'}</div>
                     </div>
                   </div>
                 );
@@ -1164,394 +1052,9 @@ const Dashboard = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-4 gap-4 mb-6">
-          <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
-            <div className="text-sm text-gray-600 mb-2">CTR</div>
-            <div className="text-2xl font-bold text-gray-900">{fmtP(currentMetrics.ctr, 2)}</div>
-            <div className={`text-sm mt-2 ${currentMetrics.ctr >= thresholds.global.ctr_min ? 'text-green-600' : 'text-red-600'}`}>
-              {currentMetrics.ctr >= thresholds.global.ctr_min ? '✓ 正常' : '⚠ 閾値以下'}
-            </div>
-            <div className="text-xs text-gray-500 mt-1">
-              {fmtN(currentMetrics.clicks)} / {fmtN(currentMetrics.impressions)}
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
-            <div className="text-sm text-gray-600 mb-2">CPL</div>
-            <div className="text-2xl font-bold text-gray-900">¥{fmtN(currentMetrics.cpl)}</div>
-            <div className={`text-sm mt-2 ${currentMetrics.cpl <= thresholds.global.cpl_max ? 'text-green-600' : 'text-red-600'}`}>
-              {currentMetrics.cpl <= thresholds.global.cpl_max ? '✓ 正常' : '⚠ 閾値超過'}
-            </div>
-            <div className="text-xs text-gray-500 mt-1">
-              ¥{fmtN(currentMetrics.spend)} / {fmtN(currentMetrics.leads_total)}
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
-            <div className="text-sm text-gray-600 mb-2">有効率</div>
-            <div className="text-2xl font-bold text-gray-900">{fmtP(currentMetrics.valid_rate)}</div>
-            <div className={`text-sm mt-2 ${currentMetrics.valid_rate >= thresholds.global.valid_rate_min ? 'text-green-600' : 'text-red-600'}`}>
-              {currentMetrics.valid_rate >= thresholds.global.valid_rate_min ? '✓ 正常' : '⚠ 閾値以下'}
-            </div>
-            <div className="text-xs text-gray-500 mt-1">
-              {fmtN(currentMetrics.leads_valid)} / {fmtN(currentMetrics.delivery_total)}
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
-            <div className="text-sm text-gray-600 mb-2">交換率</div>
-            <div className="text-2xl font-bold text-gray-900">{fmtP(currentMetrics.exchange_rate)}</div>
-            <div className={`text-sm mt-2 ${currentMetrics.exchange_rate <= thresholds.global.exch_rate_max ? 'text-green-600' : 'text-red-600'}`}>
-              {currentMetrics.exchange_rate <= thresholds.global.exch_rate_max ? '✓ 正常' : '⚠ 閾値超過'}
-            </div>
-            <div className="text-xs text-gray-500 mt-1">
-              {fmtN(currentMetrics.leads_exchanged)} / {fmtN(currentMetrics.delivery_total)}
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200 mb-6">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-bold text-gray-900">集計表示</h2>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setAggregationView('daily')}
-                className={`px-3 py-1 rounded text-sm ${
-                  aggregationView === 'daily' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                日別
-              </button>
-              <button
-                onClick={() => setAggregationView('weekly')}
-                className={`px-3 py-1 rounded text-sm ${
-                  aggregationView === 'weekly' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                週別
-              </button>
-              <button
-                onClick={() => setAggregationView('monthly')}
-                className={`px-3 py-1 rounded text-sm ${
-                  aggregationView === 'monthly' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                月別
-              </button>
-            </div>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-4 py-2 text-left">期間</th>
-                  <th className="px-4 py-2 text-right">IMP</th>
-                  <th className="px-4 py-2 text-right">クリック</th>
-                  <th className="px-4 py-2 text-right">費用</th>
-                  <th className="px-4 py-2 text-right">PV</th>
-                  <th className="px-4 py-2 text-right">資料請求</th>
-                  <th className="px-4 py-2 text-right">ウォームコール</th>
-                  {showPaidSections && <th className="px-4 py-2 text-right">アポ</th>}
-                  {showPaidSections && <th className="px-4 py-2 text-right">受注</th>}
-                </tr>
-              </thead>
-              <tbody>
-                {aggregatedData.slice(-10).map((row, idx) => (
-                  <tr key={idx} className="border-t hover:bg-gray-50">
-                    <td className="px-4 py-2">{row.period}</td>
-                    <td className="px-4 py-2 text-right">{fmtN(row.impressions)}</td>
-                    <td className="px-4 py-2 text-right">{fmtN(row.clicks)}</td>
-                    <td className="px-4 py-2 text-right">¥{fmtN(row.spend)}</td>
-                    <td className="px-4 py-2 text-right">{fmtN(row.pv)}</td>
-                    <td className="px-4 py-2 text-right">{fmtN(row.doc_req)}</td>
-                    <td className="px-4 py-2 text-right">{fmtN(row.warm_call)}</td>
-                    {showPaidSections && <td className="px-4 py-2 text-right">{fmtN(row.appt)}</td>}
-                    {showPaidSections && <td className="px-4 py-2 text-right">{fmtN(row.won)}</td>}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-3 gap-6 mb-6">
-          <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
-            <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-              <PieChart className="w-5 h-5" />
-              テーマ別PV分布
-            </h2>
-            <ResponsiveContainer width="100%" height={250}>
-              <RPieChart>
-                <Pie
-                  data={themeDistribution}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="value"
-                >
-                  {themeDistribution.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </RPieChart>
-            </ResponsiveContainer>
-          </div>
-
-          <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
-            <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-              <PieChart className="w-5 h-5" />
-              チャネル別クリック分布
-            </h2>
-            <ResponsiveContainer width="100%" height={250}>
-              <RPieChart>
-                <Pie
-                  data={channelDistribution}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="value"
-                >
-                  {channelDistribution.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </RPieChart>
-            </ResponsiveContainer>
-          </div>
-
-          <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
-            <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-              <BarChart3 className="w-5 h-5" />
-              ファネル分析
-            </h2>
-            <ResponsiveContainer width="100%" height={250}>
-              <BarChart data={funnelData} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis type="number" />
-                <YAxis dataKey="stage" type="category" width={80} tick={{ fontSize: 11 }} />
-                <Tooltip />
-                <Bar dataKey="value" fill="#3b82f6" />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200 mb-6">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-bold text-gray-900">データ管理</h2>
-            <button
-              onClick={() => setShowDataTable(!showDataTable)}
-              className="px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 text-sm"
-            >
-              {showDataTable ? 'テーブルを閉じる' : 'データテーブルを表示'}
-            </button>
-          </div>
-          
-          {showDataTable && (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-4 py-2 text-left">日付</th>
-                    <th className="px-4 py-2 text-left">テーマ</th>
-                    <th className="px-4 py-2 text-left">チャネル</th>
-                    <th className="px-4 py-2 text-right">IMP</th>
-                    <th className="px-4 py-2 text-right">クリック</th>
-                    <th className="px-4 py-2 text-right">PV</th>
-                    <th className="px-4 py-2 text-right">資料請求</th>
-                    <th className="px-4 py-2 text-center">操作</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredData.slice(0, 20).map((row) => (
-                    <tr key={row.id} className="border-t hover:bg-gray-50">
-                      <td className="px-4 py-2">{row.date}</td>
-                      <td className="px-4 py-2">{row.theme}</td>
-                      <td className="px-4 py-2">{row.channel}</td>
-                      <td className="px-4 py-2 text-right">{fmtN(row.impressions)}</td>
-                      <td className="px-4 py-2 text-right">{fmtN(row.clicks)}</td>
-                      <td className="px-4 py-2 text-right">{fmtN(row.pv)}</td>
-                      <td className="px-4 py-2 text-right">{fmtN(row.doc_req)}</td>
-                      <td className="px-4 py-2 text-center">
-                        <div className="flex justify-center gap-2">
-                          <button
-                            onClick={() => {
-                              setEditingData(row);
-                              setShowEditModal(true);
-                            }}
-                            className="p-1 text-blue-600 hover:bg-blue-50 rounded"
-                          >
-                            <Edit2 className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => deleteData(row.id)}
-                            className="p-1 text-red-600 hover:bg-red-50 rounded"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              {filteredData.length > 20 && (
-                <div className="mt-4 text-center text-sm text-gray-600">
-                  最初の20件を表示中（全{filteredData.length}件）
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-
-        {savedTemplates.length > 0 && (
-          <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200 mb-6">
-            <h3 className="text-lg font-bold text-gray-900 mb-4">保存済みテンプレート</h3>
-            <div className="space-y-2">
-              {savedTemplates.map((template) => (
-                <div key={template.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <div className="flex-1">
-                    <div className="font-semibold text-sm">{template.name}</div>
-                    <div className="text-xs text-gray-600">
-                      期間: {template.period}日
-                    </div>
-                  </div>
-                  <div className="flex gap-2">
-                    <button 
-                      onClick={() => applyTemplate(template)}
-                      className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
-                    >
-                      適用
-                    </button>
-                    <button 
-                      onClick={() => deleteTemplate(template.id)}
-                      className="px-3 py-1 bg-red-100 text-red-700 rounded text-sm hover:bg-red-200"
-                    >
-                      削除
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
         <div className="text-center text-sm text-gray-500 mb-4">
           <p>Supabase連動ダッシュボード | 最終更新: {new Date().toLocaleString('ja-JP')}</p>
         </div>
-        /span>
-                    </div>
-                  <div className="flex-1">
-                      <div className="relative h-2 bg-gray-100 rounded-full overflow-hidden">
-                        <div 
-                          className="absolute left-0 top-0 h-full rounded-full transition-all"
-                          style={{ 
-                            width: `${percentage}%`,
-                            backgroundColor: getColorCode(item.color)
-                          }}
-                        />
-                      </div>
-                    </div>
-                    <div className="text-right w-24">
-                      <div className="text-lg font-bold text-gray-900">{item.value}</div>
-                      <div className="text-xs text-gray-500">{item.change}</div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
-            <h2 className="text-xl font-bold text-gray-900 mb-2">広告パフォーマンス</h2>
-            <p className="text-sm text-gray-600 mb-6">主要指標のトレンド</p>
-            <div className="space-y-4">
-              {adMetrics.map((metric, idx) => {
-                const Icon = metric.icon;
-                const isAlert = metric.hasAlert;
-                return (
-                  <div key={idx} className="flex items-center justify-between py-2">
-                    <div className="flex items-center gap-3">
-                      <Icon className="w-4 h-4 text-gray-400" />
-                      <span className="text-sm text-gray-700">{metric.label}</span>
-                      {isAlert && <AlertTriangle className="w-4 h-4 text-red-500" />}
-                    </div>
-                    <div className="text-right">
-                      <div className="text-lg font-bold text-gray-900">{metric.value}</div>
-                      <div className={`text-xs ${metric.isGood ? 'text-green-600' : 'text-red-600'}`}>
-                        {metric.change}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-
-        {selectedMetric && trendData.length > 0 && (
-          <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200 mb-6">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold text-gray-900">{selectedMetric}のトレンド</h2>
-              <button
-                onClick={() => setSelectedMetric(null)}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                <X className="w-5 h-5 text-gray-500" />
-              </button>
-            </div>
-            <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={trendData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                  <XAxis 
-                    dataKey="date" 
-                    stroke="#6b7280"
-                    style={{ fontSize: '12px' }}
-                  />
-                  <YAxis 
-                    stroke="#6b7280"
-                    style={{ fontSize: '12px' }}
-                  />
-                  <Tooltip 
-                    contentStyle={{
-                      backgroundColor: '#fff',
-                      border: '1px solid #e5e7eb',
-                      borderRadius: '8px',
-                      fontSize: '12px'
-                    }}
-                  />
-                  <Legend />
-                  <Line 
-                    type="monotone" 
-                    dataKey="current" 
-                    stroke="#3b82f6" 
-                    strokeWidth={2}
-                    name="今期"
-                    dot={{ fill: '#3b82f6', r: 3 }}
-                  />
-                  <Line 
-                    type="monotone" 
-                    dataKey="previous" 
-                    stroke="#94a3b8" 
-                    strokeWidth={2}
-                    strokeDasharray="5 5"
-                    name="前期"
-                    dot={{ fill: '#94a3b8', r: 3 }}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-        )}
       </div>
 
       {showThresholdModal && (
@@ -1568,244 +1071,48 @@ const Dashboard = () => {
   );
 };
 
-export default Dashboard;
 const ThresholdModal = ({ thresholds, onSave, onClose }) => {
-  const [localThresholds, setLocalThresholds] = useState(thresholds);
-  const [thresholdMode, setThresholdMode] = useState('global');
-  const [selectedTheme, setSelectedTheme] = useState('sansan');
-
-  const themes = ['sansan', 'bizreach', 'smarthr'];
-
-  const handleSave = () => {
-    onSave(localThresholds);
-  };
-
-  const handleRecommend = () => {
-    // 過去データから推奨値を計算（デモ用の簡易実装）
-    const recommended = {
-      ctr_min: 1.2,
-      cpl_max: 3500,
-      valid_rate_min: 65,
-      exch_rate_max: 75,
-      cvr_min: 2.5
-    };
-    setLocalThresholds(recommended);
-  };
+  const [localThresholds, setLocalThresholds] = useState(thresholds.global);
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-8 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+      <div className="bg-white rounded-lg p-8 max-w-2xl w-full mx-4">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-2xl font-bold text-gray-900">閾値設定</h2>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-          >
+          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg">
             <X className="w-5 h-5 text-gray-500" />
           </button>
-        </div>
-
-        <div className="mb-6">
-          <div className="flex gap-2 mb-4">
-            <button
-              onClick={() => setThresholdMode('global')}
-              className={`px-4 py-2 rounded-lg transition-colors ${
-                thresholdMode === 'global'
-                  ? 'bg-blue-500 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-            >
-              全体基準
-            </button>
-            <button
-              onClick={() => setThresholdMode('theme')}
-              className={`px-4 py-2 rounded-lg transition-colors ${
-                thresholdMode === 'theme'
-                  ? 'bg-blue-500 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-            >
-              テーマ別基準
-            </button>
-          </div>
-
-          {thresholdMode === 'theme' && (
-            <div className="flex gap-2 mb-4">
-              {themes.map(theme => (
-                <button
-                  key={theme}
-                  onClick={() => setSelectedTheme(theme)}
-                  className={`px-4 py-2 rounded-lg capitalize transition-colors ${
-                    selectedTheme === theme
-                      ? 'bg-indigo-500 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-                >
-                  {theme}
-                </button>
-              ))}
-            </div>
-          )}
         </div>
 
         <div className="space-y-4 mb-6">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              CTR 最小値 (%)
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">CTR 最小値 (%)</label>
             <input
               type="number"
               step="0.1"
               value={localThresholds.ctr_min}
-              onChange={(e) => setLocalThresholds({
-                ...localThresholds,
-                ctr_min: parseFloat(e.target.value) || 0
-              })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              onChange={(e) => setLocalThresholds({...localThresholds, ctr_min: parseFloat(e.target.value) || 0})}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg"
             />
           </div>
-
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              CPL 最大値 (円)
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">CPL 最大値 (円)</label>
             <input
               type="number"
               step="100"
               value={localThresholds.cpl_max}
-              onChange={(e) => setLocalThresholds({
-                ...localThresholds,
-                cpl_max: parseFloat(e.target.value) || 0
-              })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              有効率 最小値 (%)
-            </label>
-            <input
-              type="number"
-              step="1"
-              value={localThresholds.valid_rate_min}
-              onChange={(e) => setLocalThresholds({
-                ...localThresholds,
-                valid_rate_min: parseFloat(e.target.value) || 0
-              })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              架電交換率 最大値 (%)
-            </label>
-            <input
-              type="number"
-              step="1"
-              value={localThresholds.exch_rate_max}
-              onChange={(e) => setLocalThresholds({
-                ...localThresholds,
-                exch_rate_max: parseFloat(e.target.value) || 0
-              })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              CVR 最小値 (%)
-            </label>
-            <input
-              type="number"
-              step="0.1"
-              value={localThresholds.cvr_min}
-              onChange={(e) => setLocalThresholds({
-                ...localThresholds,
-                cvr_min: parseFloat(e.target.value) || 0
-              })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              onChange={(e) => setLocalThresholds({...localThresholds, cpl_max: parseFloat(e.target.value) || 0})}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg"
             />
           </div>
         </div>
 
-        <div className="flex gap-3">
-          <button
-            onClick={handleRecommend}
-            className="flex-1 px-4 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium"
-          >
-            過去データから推奨値を計算
-          </button>
-          <button
-            onClick={handleSave}
-            className="flex-1 px-4 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors font-medium"
-          >
-            保存
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
-const AuditLog = ({ logs, onClose }) => {
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-8 max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold text-gray-900">監査ログ</h2>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-          >
-            <X className="w-5 h-5 text-gray-500" />
-          </button>
-        </div>
-
-        <div className="space-y-3">
-          {logs.length === 0 ? (
-            <div className="text-center py-12 text-gray-500">
-              <Clock className="w-12 h-12 mx-auto mb-3 opacity-50" />
-              <p>ログがまだありません</p>
-            </div>
-          ) : (
-            logs.map((log, idx) => (
-              <div 
-                key={idx}
-                className="flex items-start gap-4 p-4 bg-gray-50 rounded-lg border border-gray-200"
-              >
-                <div className="flex-shrink-0">
-                  <Clock className="w-5 h-5 text-gray-400 mt-0.5" />
-                </div>
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-sm font-medium text-gray-900">
-                      {log.action}
-                    </span>
-                    <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full">
-                      {log.type}
-                    </span>
-                  </div>
-                  <div className="text-sm text-gray-600 mb-2">
-                    {log.details}
-                  </div>
-                  <div className="text-xs text-gray-400">
-                    {log.timestamp}
-                  </div>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-
-        <div className="mt-6 pt-6 border-t border-gray-200">
-          <button
-            onClick={onClose}
-            className="w-full px-4 py-3 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-medium"
-          >
-            閉じる
-          </button>
-        </div>
+        <button
+          onClick={() => onSave({ global: localThresholds })}
+          className="w-full px-4 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+        >
+          保存
+        </button>
       </div>
     </div>
   );

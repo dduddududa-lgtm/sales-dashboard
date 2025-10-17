@@ -771,13 +771,14 @@ const Dashboard = () => {
               </p>
             </div>
             <div className="flex gap-2 flex-wrap">
-              <button 
+             <button 
                 onClick={() => setShowAddDataModal(true)}
                 className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2 text-sm"
               >
                 <Plus className="w-4 h-4" />
                 データ追加
-                <button 
+              </button>
+              <button 
                 onClick={() => setShowUploadModal(true)}
                 className="px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2 text-sm"
               >
@@ -790,7 +791,6 @@ const Dashboard = () => {
               >
                 <Target className="w-4 h-4" />
                 目標
-              </button>
               </button>
               <button 
                 onClick={() => setShowThresholdModal(true)}

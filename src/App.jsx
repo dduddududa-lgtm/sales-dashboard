@@ -1102,7 +1102,7 @@ const Dashboard = () => {
             <h2 className="text-xl font-bold text-gray-900 mb-2">営業プロセス分析</h2>
             <p className="text-sm text-gray-600 mb-6">各段階での数値と状況</p>
             <div className="space-y-4">
-              {metricsCards.slice(2).filter(m => showPaidSections || !m.hideInV1).map((item, idx) => {
+             {metricsCards.slice(2).filter(m => showPaidSections || !m.hideInV1).map((item, idx) => {
                 const Icon = item.icon;
                 const filteredCards = metricsCards.slice(2).filter(m => showPaidSections || !m.hideInV1);
                 const maxValue = Math.max(...filteredCards.map(m => parseFloat(m.value.replace(/,/g, '')) || 0));
@@ -1116,19 +1116,19 @@ const Dashboard = () => {
                       <span className="text-sm text-gray-700">{item.label}</span>
                     </div>
                     <div className="flex-1">
-                      <div className="flex items-center gap-3">
-                        <div className="flex-1 bg-gray-200 rounded-full h-3 overflow-hidden">
-                          <div 
-                            className="h-full rounded-full transition-all duration-500"
-                            style={{ 
-                              width: `${percentage}%`,
-                              backgroundColor: getColorCode(item.color)
-                            }}
-                          ></div>
-                        </div>
-                        <span className="text-sm font-semibold text-gray-900 w-24">{item.value}</span>
-                        <span className="text-xs text-gray-500 w-20 text-right">{item.reach?.toFixed(1)}%</span>
+                      <div className="relative h-2 bg-gray-100 rounded-full overflow-hidden">
+                        <div 
+                          className="absolute left-0 top-0 h-full rounded-full transition-all"
+                          style={{ 
+                            width: `${percentage}%`,
+                            backgroundColor: getColorCode(item.color)
+                          }}
+                        />
                       </div>
+                    </div>
+                    <div className="text-right w-24">
+                      <div className="text-lg font-bold text-gray-900">{item.value}</div>
+                      <div className="text-xs text-gray-500">{item.change}</div>
                     </div>
                   </div>
                 );

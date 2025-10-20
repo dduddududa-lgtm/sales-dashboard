@@ -1,6 +1,3 @@
-import jsPDF from 'jspdf';
-import 'jspdf-autotable';
-import * as XLSX from 'xlsx';
 import React, { useState, useEffect, useMemo } from 'react';
 import { TrendingUp, TrendingDown, Users, Phone, Calendar, CheckCircle, Target, AlertTriangle, Download, Save, Clock, Filter, X, Upload, Plus, Database, Edit2, Trash2, PieChart, BarChart3 } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, PieChart as RPieChart, Pie, Cell, BarChart, Bar } from 'recharts';
@@ -49,8 +46,6 @@ const Dashboard = () => {
     appt: 200,
     won: 50
   });
-  const [showReportModal, setShowReportModal] = useState(false);
-  const [reportType, setReportType] = useState('weekly');
   
   const [newData, setNewData] = useState({
     date: new Date().toISOString().split('T')[0],
@@ -334,127 +329,6 @@ const Dashboard = () => {
   };
 
   const downloadSampleCSV = () => {
-    const generatePDFReport = () => {
-    const doc = new jsPDF();
-    const reportDate = new Date().toLocaleDateString('ja-JP');
-    
-    // 제목
-    doc.setFontSize(20);
-    doc.text('営業レポート', 105, 20, { align: 'center' });
-    doc.setFontSize(12);
-    doc.text(`作成日: ${reportDate}`, 105, 30, { align: 'center' });
-    doc.text(`期間: 過去${period}日間`, 105, 38, { align: 'center' });
-    
-    // 주요 지표
-    doc.setFontSize(14);
-    doc.text('主要指標', 20, 50);
-    
-    const metricsData = [
-      ['指標', '現在', '前期', '変化率'],
-      ['PV数', fmtN(currentMetrics.pv), fmtN(previousMetrics.pv), fmtP(calculateChange(currentMetrics.pv, previousMetrics.pv))],
-      ['資料請求', fmtN(currentMetrics.doc_req), fmtN(previousMetrics.doc_req), fmtP(calculateChange(currentMetrics.doc_req, previousMetrics.doc_req))],
-      ['ウォームコール', fmtN(currentMetrics.warm_call), fmtN(previousMetrics.warm_call), fmtP(calculateChange(currentMetrics.warm_call, previousMetrics.warm_call))],
-      ['アポ', fmtN(currentMetrics.appt), fmtN(previousMetrics.appt), fmtP(calculateChange(currentMetrics.appt, previousMetrics.appt))],
-      ['受注', fmtN(currentMetrics.won), fmtN(previousMetrics.won), fmtP(calculateChange(currentMetrics.won, previousMetrics.won))]
-    ];
-    
-    doc.autoTable({
-      startY: 55,
-      head: [metricsData[0]],
-      body: metricsData.slice(1),
-      theme: 'grid'
-    });
-    
-    // 전환율
-    let finalY = doc.lastAutoTable.finalY + 10;
-    doc.setFontSize(14);
-    doc.text('転換率', 20, finalY);
-    
-    const conversionData = [
-      ['段階', '転換率', '分子/分母'],
-      ['PV→資料請求', currentMetrics.pv_to_doc.toFixed(1) + '%', `${currentMetrics.doc_req}/${currentMetrics.pv}`],
-      ['資料請求→ウォームコール', currentMetrics.doc_to_warm.toFixed(1) + '%', `${currentMetrics.warm_call}/${currentMetrics.doc_req}`],
-      ['ウォームコール→アポ', currentMetrics.warm_to_appt.toFixed(1) + '%', `${currentMetrics.appt}/${currentMetrics.warm_call}`],
-      ['アポ→受注', currentMetrics.appt_to_won.toFixed(1) + '%', `${currentMetrics.won}/${currentMetrics.appt}`]
-    ];
-    
-    doc.autoTable({
-      startY: finalY + 5,
-      head: [conversionData[0]],
-      body: conversionData.slice(1),
-      theme: 'grid'
-    });
-    
-    // 보틀넥
-    finalY = doc.lastAutoTable.finalY + 10;
-    doc.setFontSize(14);
-    doc.text('ボトルネック検出', 20, finalY);
-    doc.setFontSize(11);
-    doc.text(`${bottleneck.name}: ${bottleneck.rate.toFixed(1)}%`, 20, finalY + 7);
-    doc.setFontSize(10);
-    doc.text(`💡 ${bottleneck.hint}`, 20, finalY + 14);
-    
-    // 이상치
-    if (anomalies.length > 0) {
-      finalY = finalY + 25;
-      doc.setFontSize(14);
-      doc.text('異常検知', 20, finalY);
-      doc.setFontSize(10);
-      anomalies.forEach((a, i) => {
-        const cmpText = a.status === 'high' ? '以下' : '以上';
-        doc.text(`${a.type}: ${a.value.toFixed(2)}${a.unit} (閾値: ${a.threshold}${a.unit}${cmpText})`, 20, finalY + 7 + (i * 6));
-      });
-    }
-    
-    doc.save(`営業レポート_${reportDate}.pdf`);
-    setShowReportModal(false);
-  };
-
-  const generateExcelReport = () => {
-    const wb = XLSX.utils.book_new();
-    
-    // 주요 지표 시트
-    const metricsData = [
-      ['営業レポート', '', '', ''],
-      [`作成日: ${new Date().toLocaleDateString('ja-JP')}`, '', '', ''],
-      [`期間: 過去${period}日間`, '', '', ''],
-      ['', '', '', ''],
-      ['指標', '現在', '前期', '変化率'],
-      ['PV数', currentMetrics.pv, previousMetrics.pv, calculateChange(currentMetrics.pv, previousMetrics.pv).toFixed(1) + '%'],
-      ['資料請求', currentMetrics.doc_req, previousMetrics.doc_req, calculateChange(currentMetrics.doc_req, previousMetrics.doc_req).toFixed(1) + '%'],
-      ['ウォームコール', currentMetrics.warm_call, previousMetrics.warm_call, calculateChange(currentMetrics.warm_call, previousMetrics.warm_call).toFixed(1) + '%'],
-      ['アポ', currentMetrics.appt, previousMetrics.appt, calculateChange(currentMetrics.appt, previousMetrics.appt).toFixed(1) + '%'],
-      ['受注', currentMetrics.won, previousMetrics.won, calculateChange(currentMetrics.won, previousMetrics.won).toFixed(1) + '%'],
-      ['', '', '', ''],
-      ['転換率', '', '', ''],
-      ['PV→資料請求', currentMetrics.pv_to_doc.toFixed(1) + '%', `${currentMetrics.doc_req}/${currentMetrics.pv}`, ''],
-      ['資料請求→ウォームコール', currentMetrics.doc_to_warm.toFixed(1) + '%', `${currentMetrics.warm_call}/${currentMetrics.doc_req}`, ''],
-      ['ウォームコール→アポ', currentMetrics.warm_to_appt.toFixed(1) + '%', `${currentMetrics.appt}/${currentMetrics.warm_call}`, ''],
-      ['アポ→受注', currentMetrics.appt_to_won.toFixed(1) + '%', `${currentMetrics.won}/${currentMetrics.appt}`, '']
-    ];
-    
-    const ws1 = XLSX.utils.aoa_to_sheet(metricsData);
-    XLSX.utils.book_append_sheet(wb, ws1, 'サマリー');
-    
-    // 상세 데이터 시트
-    const detailData = filteredData.map(d => ({
-      '日付': d.date,
-      'テーマ': d.theme,
-      'チャネル': d.channel,
-      'キャンペーン': d.campaign,
-      'PV': d.pv,
-      '資料請求': d.doc_req,
-      'ウォームコール': d.warm_call,
-      'アポ': d.appt,
-      '受注': d.won
-    }));
-    
-    const ws2 = XLSX.utils.json_to_sheet(detailData);
-    XLSX.utils.book_append_sheet(wb, ws2, '詳細データ');
-    
-    XLSX.writeFile(wb, `営業レポート_${new Date().toLocaleDateString('ja-JP')}.xlsx`);
-    setShowReportModal(false);
-  };
     const sample = `date,theme,channel,campaign,week,impressions,clicks,spend,leads_total,leads_valid,leads_exchanged,pv,doc_req,warm_call,appt,won,sample_presented,sample_approved,delivery_total,delivery_on_sla
 2024-01-01,Sansan,Meta,キャンペーンA,1,30000,300,50000,15,10,8,200,20,15,10,5,30,25,15,14`;
     
@@ -820,13 +694,6 @@ const Dashboard = () => {
               >
                 <Target className="w-4 h-4" />
                 目標
-              </button>
-              <button 
-                onClick={() => setShowReportModal(true)}
-                className="px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 flex items-center gap-2 text-sm"
-              >
-                <BarChart3 className="w-4 h-4" />
-                リポート
               </button>
               <button 
                 onClick={() => setShowThresholdModal(true)}
@@ -1220,74 +1087,6 @@ const Dashboard = () => {
           onClose={() => setShowGoalModal(false)}
         />
       )}
-
-      {showReportModal && (
-        <ReportModal 
-          onClose={() => setShowReportModal(false)}
-          onGeneratePDF={generatePDFReport}
-          onGenerateExcel={generateExcelReport}
-          reportType={reportType}
-          setReportType={setReportType}
-          period={period}
-        />
-      )}
-    </div>
-  );
-};
-
-const ReportModal = ({ onClose, onGeneratePDF, onGenerateExcel, reportType, setReportType, period }) => {
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-8 max-w-lg w-full mx-4">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold text-gray-900">レポート生成</h2>
-          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg">
-            <X className="w-5 h-5 text-gray-500" />
-          </button>
-        </div>
-
-        <div className="mb-6">
-          <p className="text-sm text-gray-600 mb-4">
-            現在の期間（過去{period}日間）のレポートを生成します。
-          </p>
-          
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-            <h3 className="font-semibold text-blue-900 mb-2">📊 レポート内容</h3>
-            <ul className="text-sm text-blue-800 space-y-1">
-              <li>✓ 主要指標サマリー</li>
-              <li>✓ 前期比較・変化率</li>
-              <li>✓ 転換率分析</li>
-              <li>✓ ボトルネック検出</li>
-              <li>✓ 異常検知アラート</li>
-            </ul>
-          </div>
-
-          <div className="space-y-3">
-            <button
-              onClick={onGeneratePDF}
-              className="w-full px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 flex items-center justify-center gap-2 font-medium"
-            >
-              <Download className="w-5 h-5" />
-              PDFダウンロード
-            </button>
-            
-            <button
-              onClick={onGenerateExcel}
-              className="w-full px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center justify-center gap-2 font-medium"
-            >
-              <Download className="w-5 h-5" />
-              Excelダウンロード
-            </button>
-          </div>
-        </div>
-
-        <button
-          onClick={onClose}
-          className="w-full px-4 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
-        >
-          キャンセル
-        </button>
-      </div>
     </div>
   );
 };
